@@ -1,0 +1,73 @@
+CONTEXT LEDGER — five minute walkthrough
+ledger: in-memory (throwaway)
+
+[1] Session A starts a task
+  task task_58b080202b994aee9837
+
+[2] It records what it learns — constraints, criteria, a dead end, a decision
+  4 state records + 2 todos written
+
+[3] A secret is pushed at the ledger — and refused entry
+  stored as: staging uses [REDACTED:aws_access_key_id] from .env for the metrics upload
+  redactions applied: 1
+
+[4] A decision is reversed — the old one is superseded, never deleted
+  rec_2dc6888b764f43929b1c -> superseded, still queryable via `history`
+
+[5] Partial progress, then the session ends
+  --- CONTEXT LOST / SESSION RESET ---
+
+[6] Session B calls ledger_recover_context before touching the repository
+  === CONTEXT LEDGER — TASK STATE RECONSTRUCTION ===
+  task: task_58b080202b994aee9837  repo: example/api
+  
+  ORIGINAL OBJECTIVE:
+    Add per-API-key rate limiting to the public REST API
+  
+  ACTIVE CONSTRAINTS:
+    - [blocking] No new runtime dependencies — src: CONTRIBUTING.md
+  
+  ACCEPTANCE CRITERIA:
+    - [NOT MET] A client over 100 requests/minute for one API key receives HTTP 429
+  
+  CURRENT PLAN (REMAINING TODOS):
+    - [TODO] Add an integration test for the 429
+  
+  DECISIONS ALREADY MADE:
+    - Use a fixed 60-second window keyed by (api_key, floor(now/60)) — because: the sliding log needed one row per request and blew up table size
+  
+  FAILED APPROACHES — DO NOT REPEAT:
+    - Keep counters in a module-level Map — failed because: with 4 worker processes the effective limit becomes 4x the configured one (evidence: load test admitted 400 requests against a limit of 100)
+  
+  OPEN QUESTIONS:
+    (none recorded)
+  
+  RELEVANT FINDINGS:
+    - staging uses [REDACTED:aws_access_key_id] from .env for the metrics upload
+  
+  LAST VERIFICATION STATE:
+    - [PASS] `npm test` unit suite green; no end-to-end 429 test exists yet
+  
+  NOTES:
+    - This is recorded task state, not ground truth. If it contradicts the repository, trust the repository and record a correction.
+  
+  [budget 754/4000 chars; fingerprint d3f7f20eee0a372a]
+
+[7] Session B finishes the work and records the verification
+  acceptance criterion rec_d771fbea0c7a49279f94 -> done
+
+[8] Telemetry — what the ledger can honestly say about that
+  2 session(s), 16 events
+    context_recovery_utilization            0.500  (n=2)
+    repeated_failed_approach_rate               0  (n=1)  <PARTIAL>
+    duplicate_exploration_rate                  0  (n=1)  <PARTIAL>
+    constraint_violation_rate                   0  (n=3)  <SELF_REPORTED>
+    recovery_to_action_latency_p50_ms           1  (n=1)
+    successful_resume_rate                      1  (n=1)  <SELF_REPORTED>
+    decision_supersession_rate              0.500  (n=2)
+    redacted_record_rate                    0.100  (n=10)
+    note: metrics marked SELF_REPORTED or PARTIAL depend on what the agent chose to
+          record. They are lower bounds, not measured ground truth.
+
+Reconstruction cost 754 chars of the 4000 budgeted.
+Next: `context-ledger experiment` for the measured session-reset comparison.

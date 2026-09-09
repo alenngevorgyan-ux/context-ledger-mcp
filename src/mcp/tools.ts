@@ -482,6 +482,17 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       },
       outputSchema: {
         ok: z.boolean(),
+        /**
+         * The reconstruction itself, duplicated here on purpose.
+         *
+         * Found by a live smoke test against Claude Code: when a tool declares
+         * an outputSchema, some hosts surface ONLY `structuredContent` to the
+         * model and discard the text block. With the reconstruction living
+         * solely in the text content, the agent received nothing but metadata
+         * and correctly refused to answer. A tool whose entire value is a text
+         * payload must put that payload in the structured output too.
+         */
+        reconstruction: z.string().optional(),
         task_id: z.string().optional(),
         used_chars: z.number().optional(),
         budget_chars: z.number().optional(),
@@ -505,6 +516,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
           content: [{ type: 'text' as const, text }],
           structuredContent: {
             ok: true,
+            reconstruction: text,
             task_id: selection.task.id,
             used_chars: selection.used_chars,
             budget_chars: selection.budget_chars,

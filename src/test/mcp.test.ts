@@ -79,6 +79,8 @@ describe('MCP protocol surface', () => {
   });
 });
 
+let taskIdForRegression: string;
+
 describe('MCP tool behaviour end to end', () => {
   let taskId: string;
 
@@ -95,6 +97,7 @@ describe('MCP tool behaviour end to end', () => {
     const s = structOf(res);
     assert.equal(s['ok'], true);
     taskId = s['task_id'] as string;
+    taskIdForRegression = taskId;
     assert.match(taskId, /^task_/);
     assert.equal(s['constraints'], 2);
   });
@@ -239,5 +242,34 @@ describe('MCP tool behaviour end to end', () => {
     )['records'] as any[];
     assert.ok(full.length > lean.length);
     assert.ok(lean.every((r) => r.status !== 'superseded'));
+  });
+});
+
+/**
+ * Regression tests for defects found by live agent integration, not by design.
+ * See docs/agent-integration.md for the smoke-test transcript.
+ */
+describe('host-compatibility regressions', () => {
+  test('the reconstruction is present in structuredContent, not only in the text block', async () => {
+    // A host that declares support for structured output may surface ONLY
+    // structuredContent to the model. Claude Code did exactly this, and the
+    // agent received metadata with no state and (correctly) refused to answer.
+    const res = await call('ledger_recover_context', { task_id: taskIdForRegression });
+    const s = structOf(res);
+    assert.equal(typeof s['reconstruction'], 'string');
+    assert.match(s['reconstruction'] as string, /ORIGINAL OBJECTIVE/);
+    assert.equal(s['reconstruction'], textOf(res), 'text and structured payload must agree');
+  });
+
+  test('every tool that returns a payload puts it in structuredContent', async () => {
+    const { tools } = await client.listTools();
+    for (const t of tools) {
+      if (!t.outputSchema) continue;
+      const props = (t.outputSchema as { properties?: Record<string, unknown> }).properties ?? {};
+      assert.ok(
+        Object.keys(props).length > 1,
+        `${t.name}: declares an outputSchema with no useful payload`,
+      );
+    }
   });
 });

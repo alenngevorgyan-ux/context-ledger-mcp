@@ -1,0 +1,587 @@
+{
+  "scenario_id": "rate-limit-resume",
+  "scenario_title": "Per-API-key rate limiting, resumed after a session reset",
+  "measured_at": "2026-09-09T18:59:33.937Z",
+  "budget_chars": 4000,
+  "session_a_records": 17,
+  "conditions": {
+    "baseline": {
+      "condition": "baseline",
+      "context_chars": 680,
+      "probes": [
+        {
+          "probe_id": "no-new-deps",
+          "question": "Is the agent allowed to add Redis (or any new runtime dependency)?",
+          "criticality": "critical",
+          "satisfied": false,
+          "missing_groups": [
+            [
+              "no new runtime dependencies",
+              "no new runtime dependency"
+            ]
+          ],
+          "failure_if_missing": "Session B reaches for Redis, the canonical rate-limiting answer, and the PR is rejected."
+        },
+        {
+          "probe_id": "multi-worker",
+          "question": "Must limiter state be shared across processes?",
+          "criticality": "critical",
+          "satisfied": false,
+          "missing_groups": [
+            [
+              "4 worker",
+              "across all of them",
+              "worker processes"
+            ]
+          ],
+          "failure_if_missing": "Session B ships an in-process counter that silently allows 4x the configured limit."
+        },
+        {
+          "probe_id": "per-key-not-ip",
+          "question": "Is the limit keyed on the API key or the source IP?",
+          "criticality": "critical",
+          "satisfied": false,
+          "missing_groups": [
+            [
+              "not per source ip",
+              "not per-source-ip",
+              "not per source IP"
+            ]
+          ],
+          "failure_if_missing": "Session B implements IP-based limiting and misses the acceptance criterion."
+        },
+        {
+          "probe_id": "rejected-nginx",
+          "question": "Was edge enforcement in nginx already tried and rejected?",
+          "criticality": "critical",
+          "satisfied": false,
+          "missing_groups": [
+            [
+              "nginx"
+            ],
+            [
+              "limit_req",
+              "source ip",
+              "source IP"
+            ]
+          ],
+          "failure_if_missing": "Session B spends a cycle re-implementing and re-discarding the nginx approach."
+        },
+        {
+          "probe_id": "rejected-inprocess-map",
+          "question": "Was a module-level Map of counters already tried and rejected?",
+          "criticality": "critical",
+          "satisfied": false,
+          "missing_groups": [
+            [
+              "4x",
+              "400 requests",
+              "each holding its own"
+            ]
+          ],
+          "failure_if_missing": "Session B re-implements the exact bug that Session A already found in a load test."
+        },
+        {
+          "probe_id": "chosen-postgres",
+          "question": "What storage was chosen for the counters, and why?",
+          "criticality": "critical",
+          "satisfied": false,
+          "missing_groups": [
+            [
+              "postgres"
+            ],
+            [
+              "upsert",
+              "already a dependency",
+              "atomic"
+            ]
+          ],
+          "failure_if_missing": "Session B re-litigates a settled architectural decision, or contradicts it."
+        },
+        {
+          "probe_id": "window-strategy",
+          "question": "Fixed window or sliding log, and was the burst tradeoff accepted?",
+          "criticality": "important",
+          "satisfied": false,
+          "missing_groups": [
+            [
+              "fixed",
+              "60-second",
+              "fixed window"
+            ],
+            [
+              "sliding",
+              "2x",
+              "burst"
+            ]
+          ],
+          "failure_if_missing": "Session B switches to a sliding window, reversing an accepted tradeoff without knowing it was accepted."
+        },
+        {
+          "probe_id": "auth-middleware-location",
+          "question": "Where is the API key available in the request pipeline?",
+          "criticality": "important",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B re-reads the middleware chain to rediscover where req.apiKey is set."
+        },
+        {
+          "probe_id": "ci-migration-order",
+          "question": "What does the test setup require before an integration test can pass?",
+          "criticality": "important",
+          "satisfied": false,
+          "missing_groups": [
+            [
+              "migration"
+            ]
+          ],
+          "failure_if_missing": "Session B writes the integration test, hits a confusing missing-relation error, and debugs CI."
+        },
+        {
+          "probe_id": "remaining-plan",
+          "question": "What work is left, and what is already done?",
+          "criticality": "critical",
+          "satisfied": false,
+          "missing_groups": [
+            [
+              "integration test",
+              "429"
+            ]
+          ],
+          "failure_if_missing": "Session B re-derives the plan, and may redo the migration that Session A already completed."
+        },
+        {
+          "probe_id": "migration-already-done",
+          "question": "Is the counters migration already written?",
+          "criticality": "important",
+          "satisfied": false,
+          "missing_groups": [
+            [
+              "migration"
+            ]
+          ],
+          "failure_if_missing": "Session B writes a duplicate migration."
+        },
+        {
+          "probe_id": "open-question-exemption",
+          "question": "Is there an unresolved question blocking a design choice?",
+          "criticality": "useful",
+          "satisfied": false,
+          "missing_groups": [
+            [
+              "internal service",
+              "exempt"
+            ]
+          ],
+          "failure_if_missing": "Session B silently picks an answer to a question that was escalated to a human."
+        },
+        {
+          "probe_id": "latency-budget",
+          "question": "Is there a latency budget the implementation must respect?",
+          "criticality": "important",
+          "satisfied": false,
+          "missing_groups": [
+            [
+              "5ms",
+              "5 ms"
+            ],
+            [
+              "p99",
+              "latency"
+            ]
+          ],
+          "failure_if_missing": "Session B ships a per-request extra query with no awareness of the SLO."
+        },
+        {
+          "probe_id": "last-verification",
+          "question": "What was the last known verification state?",
+          "criticality": "useful",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B does not know whether the tree was green when it stopped."
+        },
+        {
+          "probe_id": "retry-after-value",
+          "question": "What exact Retry-After value should the 429 response carry?",
+          "criticality": "important",
+          "satisfied": false,
+          "missing_groups": [
+            [
+              "retry-after"
+            ],
+            [
+              "seconds until",
+              "remainder of the window",
+              "exact value"
+            ]
+          ],
+          "failure_if_missing": "Session B guesses a Retry-After value. NOTE: Session A never established this, so no condition can supply it. This probe exists to prove the ledger does not invent knowledge."
+        },
+        {
+          "probe_id": "partial-impl-location",
+          "question": "Which file holds the partial implementation from Session A?",
+          "criticality": "important",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B writes a second limiter module. NOTE: this fact lives in the repository, not the ledger. It exists to prove the ledger is a supplement to the repo, not a replacement."
+        }
+      ],
+      "satisfied": 3,
+      "total": 16,
+      "sufficiency": 0.1875,
+      "critical_satisfied": 0,
+      "critical_total": 7,
+      "critical_sufficiency": 0,
+      "density": 4.411764705882353,
+      "context": "TICKET API-4127: Add per-API-key rate limiting to the public REST API so that abusive\nclients cannot degrade service for everyone else.\n\nRepository state visible to a fresh session:\n  README.md      — \"example/api is a Node service. Run tests with `npm test`.\"\n  CONTRIBUTING.md— \"Open a PR against main. Keep the CI green.\"\n  src/app.ts     — express app setup, middleware registration\n  src/routes/    — route handlers\n  src/limiter.ts — NEW, uncommitted, partial:\n      // TODO: wire into the router\n      export function createLimiter(opts) { /* counter map, partial */ }\n  git log -1     — \"wip: start rate limiter\"\n  npm test       — passes (no rate limiter tests exist yet)"
+    },
+    "ledger_only": {
+      "condition": "ledger_only",
+      "context_chars": 3513,
+      "probes": [
+        {
+          "probe_id": "no-new-deps",
+          "question": "Is the agent allowed to add Redis (or any new runtime dependency)?",
+          "criticality": "critical",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B reaches for Redis, the canonical rate-limiting answer, and the PR is rejected."
+        },
+        {
+          "probe_id": "multi-worker",
+          "question": "Must limiter state be shared across processes?",
+          "criticality": "critical",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B ships an in-process counter that silently allows 4x the configured limit."
+        },
+        {
+          "probe_id": "per-key-not-ip",
+          "question": "Is the limit keyed on the API key or the source IP?",
+          "criticality": "critical",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B implements IP-based limiting and misses the acceptance criterion."
+        },
+        {
+          "probe_id": "rejected-nginx",
+          "question": "Was edge enforcement in nginx already tried and rejected?",
+          "criticality": "critical",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B spends a cycle re-implementing and re-discarding the nginx approach."
+        },
+        {
+          "probe_id": "rejected-inprocess-map",
+          "question": "Was a module-level Map of counters already tried and rejected?",
+          "criticality": "critical",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B re-implements the exact bug that Session A already found in a load test."
+        },
+        {
+          "probe_id": "chosen-postgres",
+          "question": "What storage was chosen for the counters, and why?",
+          "criticality": "critical",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B re-litigates a settled architectural decision, or contradicts it."
+        },
+        {
+          "probe_id": "window-strategy",
+          "question": "Fixed window or sliding log, and was the burst tradeoff accepted?",
+          "criticality": "important",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B switches to a sliding window, reversing an accepted tradeoff without knowing it was accepted."
+        },
+        {
+          "probe_id": "auth-middleware-location",
+          "question": "Where is the API key available in the request pipeline?",
+          "criticality": "important",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B re-reads the middleware chain to rediscover where req.apiKey is set."
+        },
+        {
+          "probe_id": "ci-migration-order",
+          "question": "What does the test setup require before an integration test can pass?",
+          "criticality": "important",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B writes the integration test, hits a confusing missing-relation error, and debugs CI."
+        },
+        {
+          "probe_id": "remaining-plan",
+          "question": "What work is left, and what is already done?",
+          "criticality": "critical",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B re-derives the plan, and may redo the migration that Session A already completed."
+        },
+        {
+          "probe_id": "migration-already-done",
+          "question": "Is the counters migration already written?",
+          "criticality": "important",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B writes a duplicate migration."
+        },
+        {
+          "probe_id": "open-question-exemption",
+          "question": "Is there an unresolved question blocking a design choice?",
+          "criticality": "useful",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B silently picks an answer to a question that was escalated to a human."
+        },
+        {
+          "probe_id": "latency-budget",
+          "question": "Is there a latency budget the implementation must respect?",
+          "criticality": "important",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B ships a per-request extra query with no awareness of the SLO."
+        },
+        {
+          "probe_id": "last-verification",
+          "question": "What was the last known verification state?",
+          "criticality": "useful",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B does not know whether the tree was green when it stopped."
+        },
+        {
+          "probe_id": "retry-after-value",
+          "question": "What exact Retry-After value should the 429 response carry?",
+          "criticality": "important",
+          "satisfied": false,
+          "missing_groups": [
+            [
+              "seconds until",
+              "remainder of the window",
+              "exact value"
+            ]
+          ],
+          "failure_if_missing": "Session B guesses a Retry-After value. NOTE: Session A never established this, so no condition can supply it. This probe exists to prove the ledger does not invent knowledge."
+        },
+        {
+          "probe_id": "partial-impl-location",
+          "question": "Which file holds the partial implementation from Session A?",
+          "criticality": "important",
+          "satisfied": false,
+          "missing_groups": [
+            [
+              "src/limiter.ts"
+            ]
+          ],
+          "failure_if_missing": "Session B writes a second limiter module. NOTE: this fact lives in the repository, not the ledger. It exists to prove the ledger is a supplement to the repo, not a replacement."
+        }
+      ],
+      "satisfied": 14,
+      "total": 16,
+      "sufficiency": 0.875,
+      "critical_satisfied": 7,
+      "critical_total": 7,
+      "critical_sufficiency": 1,
+      "density": 3.985197836606889,
+      "context": "=== CONTEXT LEDGER — TASK STATE RECONSTRUCTION ===\ntask: task_b6204d140f5d4842b109  repo: example/api\n\nORIGINAL OBJECTIVE:\n  Add per-API-key rate limiting to the public REST API so that abusive clients cannot degrade service for everyone else.\n\nACTIVE CONSTRAINTS:\n  - [blocking] The service runs 4 worker processes behind a load balancer; limiter state must be correct across all of them — src: deploy/ecs-task.json sets desired count 4\n  - [blocking] No new runtime dependencies may be added to the service — src: CONTRIBUTING.md line 12, confirmed by the tech lead in the ticket thread\n  - [important] Must not add more than 5ms to p99 request latency — src: SLO doc\n\nACCEPTANCE CRITERIA:\n  - [NOT MET] Limits are enforced per API key, not per source IP\n  - [NOT MET] A client exceeding 100 requests per minute for one API key receives HTTP 429 with a Retry-After header\n\nCURRENT PLAN (REMAINING TODOS):\n  - [TODO] Add an integration test asserting 429 and Retry-After after 100 requests\n  - [TODO] Wire createLimiter into the router after the auth middleware in src/app.ts\n\nDECISIONS ALREADY MADE:\n  - Use a fixed 60-second window keyed by (api_key, floor(now/60)) rather than a sliding window log — because: a sliding log needs one row per request and blew up table size in the benchmark; a fixed window admits at most a 2x boundary burst, which the tech lead accepted as a tradeoff for this ticket (confidence 0.70)\n  - Implement the limiter in-process but share state across workers via the existing Postgres connection, using an atomic UPSERT on a counters table — because: Redis is the obvious choice but would be a new runtime dependency, which is blocked. Postgres is already a dependency, and an atomic UPSERT with a windowed key is correct across all 4 workers. Measured cost was 1.8ms p99, inside the 5ms budget. (confidence 0.85)\n\nFAILED APPROACHES — DO NOT REPEAT:\n  - Keep the counters in a module-level Map in the Node process — failed because: with 4 worker processes each holding its own Map, the effective limit becomes 4x the configured one; a 100/min limit let 400 requests through in the load test (evidence: load test: 400 requests admitted against a configured limit of 100)\n  - Enforce the limit at the edge in nginx using limit_req — failed because: nginx terminates TLS before the Authorization header is parsed by the app, so it can key only on source IP; that violates the per-API-key acceptance criterion, and NAT-ed customers would be limited collectively (evidence: tried it in deploy/nginx.conf, per-key zone had no usable key variable)\n\nOPEN QUESTIONS:\n  - Should internal service-to-service tokens be exempt from the limit, or limited at a higher threshold?\n\nRELEVANT FINDINGS:\n  - The API key is resolved by the auth middleware in src/app.ts:41, and is attached as req.apiKey; anything registered after that line can read it (src/app.ts:41) (confidence 0.95)\n  - The counters table migration must go in migrations/ and CI runs migrations before tests; a test added without the migration fails with relation \"rate_limit_counters\" does not exist (.github/workflows/ci.yml step \"db:migrate\") (confidence 0.90)\n\nLAST VERIFICATION STATE:\n  - [PASS] `npm test` Unit tests pass; the limiter module is correct in isolation but is not yet wired into the router, so no end-to-end 429 exists\n\nNOTES:\n  - This is recorded task state, not ground truth. If it contradicts the repository, trust the repository and record a correction.\n\n[budget 2996/4000 chars; fingerprint 89b2f7018be58f39]"
+    },
+    "ledger": {
+      "condition": "ledger",
+      "context_chars": 4195,
+      "probes": [
+        {
+          "probe_id": "no-new-deps",
+          "question": "Is the agent allowed to add Redis (or any new runtime dependency)?",
+          "criticality": "critical",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B reaches for Redis, the canonical rate-limiting answer, and the PR is rejected."
+        },
+        {
+          "probe_id": "multi-worker",
+          "question": "Must limiter state be shared across processes?",
+          "criticality": "critical",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B ships an in-process counter that silently allows 4x the configured limit."
+        },
+        {
+          "probe_id": "per-key-not-ip",
+          "question": "Is the limit keyed on the API key or the source IP?",
+          "criticality": "critical",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B implements IP-based limiting and misses the acceptance criterion."
+        },
+        {
+          "probe_id": "rejected-nginx",
+          "question": "Was edge enforcement in nginx already tried and rejected?",
+          "criticality": "critical",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B spends a cycle re-implementing and re-discarding the nginx approach."
+        },
+        {
+          "probe_id": "rejected-inprocess-map",
+          "question": "Was a module-level Map of counters already tried and rejected?",
+          "criticality": "critical",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B re-implements the exact bug that Session A already found in a load test."
+        },
+        {
+          "probe_id": "chosen-postgres",
+          "question": "What storage was chosen for the counters, and why?",
+          "criticality": "critical",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B re-litigates a settled architectural decision, or contradicts it."
+        },
+        {
+          "probe_id": "window-strategy",
+          "question": "Fixed window or sliding log, and was the burst tradeoff accepted?",
+          "criticality": "important",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B switches to a sliding window, reversing an accepted tradeoff without knowing it was accepted."
+        },
+        {
+          "probe_id": "auth-middleware-location",
+          "question": "Where is the API key available in the request pipeline?",
+          "criticality": "important",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B re-reads the middleware chain to rediscover where req.apiKey is set."
+        },
+        {
+          "probe_id": "ci-migration-order",
+          "question": "What does the test setup require before an integration test can pass?",
+          "criticality": "important",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B writes the integration test, hits a confusing missing-relation error, and debugs CI."
+        },
+        {
+          "probe_id": "remaining-plan",
+          "question": "What work is left, and what is already done?",
+          "criticality": "critical",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B re-derives the plan, and may redo the migration that Session A already completed."
+        },
+        {
+          "probe_id": "migration-already-done",
+          "question": "Is the counters migration already written?",
+          "criticality": "important",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B writes a duplicate migration."
+        },
+        {
+          "probe_id": "open-question-exemption",
+          "question": "Is there an unresolved question blocking a design choice?",
+          "criticality": "useful",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B silently picks an answer to a question that was escalated to a human."
+        },
+        {
+          "probe_id": "latency-budget",
+          "question": "Is there a latency budget the implementation must respect?",
+          "criticality": "important",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B ships a per-request extra query with no awareness of the SLO."
+        },
+        {
+          "probe_id": "last-verification",
+          "question": "What was the last known verification state?",
+          "criticality": "useful",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B does not know whether the tree was green when it stopped."
+        },
+        {
+          "probe_id": "retry-after-value",
+          "question": "What exact Retry-After value should the 429 response carry?",
+          "criticality": "important",
+          "satisfied": false,
+          "missing_groups": [
+            [
+              "seconds until",
+              "remainder of the window",
+              "exact value"
+            ]
+          ],
+          "failure_if_missing": "Session B guesses a Retry-After value. NOTE: Session A never established this, so no condition can supply it. This probe exists to prove the ledger does not invent knowledge."
+        },
+        {
+          "probe_id": "partial-impl-location",
+          "question": "Which file holds the partial implementation from Session A?",
+          "criticality": "important",
+          "satisfied": true,
+          "missing_groups": [],
+          "failure_if_missing": "Session B writes a second limiter module. NOTE: this fact lives in the repository, not the ledger. It exists to prove the ledger is a supplement to the repo, not a replacement."
+        }
+      ],
+      "satisfied": 15,
+      "total": 16,
+      "sufficiency": 0.9375,
+      "critical_satisfied": 7,
+      "critical_total": 7,
+      "critical_sufficiency": 1,
+      "density": 3.575685339690107,
+      "context": "TICKET API-4127: Add per-API-key rate limiting to the public REST API so that abusive\nclients cannot degrade service for everyone else.\n\nRepository state visible to a fresh session:\n  README.md      — \"example/api is a Node service. Run tests with `npm test`.\"\n  CONTRIBUTING.md— \"Open a PR against main. Keep the CI green.\"\n  src/app.ts     — express app setup, middleware registration\n  src/routes/    — route handlers\n  src/limiter.ts — NEW, uncommitted, partial:\n      // TODO: wire into the router\n      export function createLimiter(opts) { /* counter map, partial */ }\n  git log -1     — \"wip: start rate limiter\"\n  npm test       — passes (no rate limiter tests exist yet)\n\n=== CONTEXT LEDGER — TASK STATE RECONSTRUCTION ===\ntask: task_b6204d140f5d4842b109  repo: example/api\n\nORIGINAL OBJECTIVE:\n  Add per-API-key rate limiting to the public REST API so that abusive clients cannot degrade service for everyone else.\n\nACTIVE CONSTRAINTS:\n  - [blocking] The service runs 4 worker processes behind a load balancer; limiter state must be correct across all of them — src: deploy/ecs-task.json sets desired count 4\n  - [blocking] No new runtime dependencies may be added to the service — src: CONTRIBUTING.md line 12, confirmed by the tech lead in the ticket thread\n  - [important] Must not add more than 5ms to p99 request latency — src: SLO doc\n\nACCEPTANCE CRITERIA:\n  - [NOT MET] Limits are enforced per API key, not per source IP\n  - [NOT MET] A client exceeding 100 requests per minute for one API key receives HTTP 429 with a Retry-After header\n\nCURRENT PLAN (REMAINING TODOS):\n  - [TODO] Add an integration test asserting 429 and Retry-After after 100 requests\n  - [TODO] Wire createLimiter into the router after the auth middleware in src/app.ts\n\nDECISIONS ALREADY MADE:\n  - Use a fixed 60-second window keyed by (api_key, floor(now/60)) rather than a sliding window log — because: a sliding log needs one row per request and blew up table size in the benchmark; a fixed window admits at most a 2x boundary burst, which the tech lead accepted as a tradeoff for this ticket (confidence 0.70)\n  - Implement the limiter in-process but share state across workers via the existing Postgres connection, using an atomic UPSERT on a counters table — because: Redis is the obvious choice but would be a new runtime dependency, which is blocked. Postgres is already a dependency, and an atomic UPSERT with a windowed key is correct across all 4 workers. Measured cost was 1.8ms p99, inside the 5ms budget. (confidence 0.85)\n\nFAILED APPROACHES — DO NOT REPEAT:\n  - Keep the counters in a module-level Map in the Node process — failed because: with 4 worker processes each holding its own Map, the effective limit becomes 4x the configured one; a 100/min limit let 400 requests through in the load test (evidence: load test: 400 requests admitted against a configured limit of 100)\n  - Enforce the limit at the edge in nginx using limit_req — failed because: nginx terminates TLS before the Authorization header is parsed by the app, so it can key only on source IP; that violates the per-API-key acceptance criterion, and NAT-ed customers would be limited collectively (evidence: tried it in deploy/nginx.conf, per-key zone had no usable key variable)\n\nOPEN QUESTIONS:\n  - Should internal service-to-service tokens be exempt from the limit, or limited at a higher threshold?\n\nRELEVANT FINDINGS:\n  - The API key is resolved by the auth middleware in src/app.ts:41, and is attached as req.apiKey; anything registered after that line can read it (src/app.ts:41) (confidence 0.95)\n  - The counters table migration must go in migrations/ and CI runs migrations before tests; a test added without the migration fails with relation \"rate_limit_counters\" does not exist (.github/workflows/ci.yml step \"db:migrate\") (confidence 0.90)\n\nLAST VERIFICATION STATE:\n  - [PASS] `npm test` Unit tests pass; the limiter module is correct in isolation but is not yet wired into the router, so no end-to-end 429 exists\n\nNOTES:\n  - This is recorded task state, not ground truth. If it contradicts the repository, trust the repository and record a correction.\n\n[budget 2996/4000 chars; fingerprint 89b2f7018be58f39]"
+    }
+  },
+  "budget_sweep": [
+    {
+      "budget_chars": 4000,
+      "used_chars": 2996,
+      "sufficiency": 0.9375,
+      "critical_sufficiency": 1,
+      "budget_exceeded": false
+    },
+    {
+      "budget_chars": 2500,
+      "used_chars": 2421,
+      "sufficiency": 0.8125,
+      "critical_sufficiency": 1,
+      "budget_exceeded": false
+    },
+    {
+      "budget_chars": 1500,
+      "used_chars": 2316,
+      "sufficiency": 0.75,
+      "critical_sufficiency": 1,
+      "budget_exceeded": true
+    },
+    {
+      "budget_chars": 900,
+      "used_chars": 2316,
+      "sufficiency": 0.75,
+      "critical_sufficiency": 1,
+      "budget_exceeded": true
+    },
+    {
+      "budget_chars": 500,
+      "used_chars": 2068,
+      "sufficiency": 0.75,
+      "critical_sufficiency": 1,
+      "budget_exceeded": true
+    }
+  ],
+  "delta": {
+    "sufficiency": 0.75,
+    "critical_sufficiency": 1,
+    "density": -0.8360793661922461
+  },
+  "measurement_scope": {
+    "measured": "Context sufficiency: the fraction of state items Session B provably needs that are present in the resume context it receives. Deterministic string matching, no model.",
+    "not_measured": "Agent behaviour. Whether a real coding agent given the sufficient context actually avoids the repeated dead ends, honours the constraints and completes the task. Sufficiency is a necessary condition and an upper bound, not evidence of outcome. See docs/agentdev-experiment.md for the pre-registered live-agent design.",
+    "baseline_fairness": "The baseline receives the full ticket plus the repository as Session A left it (partial implementation, TODO comment, commit message, passing test suite), and the ledger condition receives that SAME context plus recovery. The comparison is additive."
+  },
+  "recovery_fingerprint": "89b2f7018be58f39"
+}

@@ -54,6 +54,13 @@ COMMANDS
   doctor                   Environment and schema check.
 `;
 
+// `context-ledger events | head` is a normal thing to do, and it closes the
+// pipe early. Without this the process dies with an unhandled EPIPE stack trace.
+process.stdout.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EPIPE') process.exit(0);
+  throw err;
+});
+
 function out(s: string): void {
   process.stdout.write(`${s}\n`);
 }

@@ -1,0 +1,116 @@
+{
+  "$comment": "Authoritative test manifest. Each suite names the CLAIM it defends. A claim in README, PRODUCT.md or the interviewer brief that is not defended by a suite here is a claim we are not entitled to make.",
+  "runner": "node --test",
+  "command": "npm test",
+  "requires": {
+    "node": ">=22.5.0"
+  },
+  "total_tests": 107,
+  "suites": [
+    {
+      "file": "src/test/model.test.ts",
+      "tests": 19,
+      "defends": [
+        "Records validate at the storage boundary, not in the MCP layer, so no write path bypasses validation.",
+        "Decisions and rejected approaches cannot be recorded without a rationale.",
+        "Supersession is single-successor, same-task, same-type, and never applies to an already-inactive record.",
+        "Nothing is ever deleted: a six-deep supersession chain retains all six records.",
+        "Superseded records leave recovery output but remain in the audit dump.",
+        "Task isolation: no record or recovery output crosses a task boundary.",
+        "Content is immutable; only status transitions are permitted in place.",
+        "A record cannot be born inactive; `transition` cannot reach `superseded` without a successor.",
+        "Every superseded record has exactly one successor, and exactly one record is the live head.",
+        "Task creation is atomic with its telemetry event."
+      ]
+    },
+    {
+      "file": "src/test/persistence.test.ts",
+      "tests": 6,
+      "defends": [
+        "State and telemetry survive closing the database and reopening the file in a new connection.",
+        "A v1 database migrates forward with data preserved and a usable backfilled ordering.",
+        "Migration is idempotent.",
+        "A database written by a newer schema version is refused rather than silently misread."
+      ]
+    },
+    {
+      "file": "src/test/redaction.test.ts",
+      "tests": 20,
+      "defends": [
+        "Twelve classes of secret are detected and redacted.",
+        "Ordinary engineering prose (file:line refs, git SHAs, benchmark numbers, URLs) produces zero false positives.",
+        "Redaction is deterministic and its output contains no residual secret.",
+        "content, rationale, evidence and the task objective are all scrubbed.",
+        "reject mode persists nothing at all.",
+        "No secret reaches recovery output."
+      ]
+    },
+    {
+      "file": "src/test/recovery.test.ts",
+      "tests": 17,
+      "defends": [
+        "DETERMINISM: identical requests produce byte-identical output; output is independent of wall-clock time and of record ids.",
+        "Ranking ties resolve on a total order, never on chance.",
+        "BOUNDING: a generous budget is respected; a tight budget drops material and says so in the output.",
+        "PROTECTED SET: blocking constraints, unmet acceptance criteria, rejected approaches and active decisions are never silently dropped; the budget is declared exceeded instead.",
+        "Advisory constraints and findings ARE droppable under pressure.",
+        "Every mandated section is present; an empty section says '(none recorded)' rather than vanishing.",
+        "Recovery emits a telemetry event, so utilisation is measurable."
+      ]
+    },
+    {
+      "file": "src/test/concurrency.test.ts",
+      "tests": 5,
+      "defends": [
+        "Two connections to the same ledger file observe each other's writes.",
+        "Forty interleaved writes across two connections lose nothing and duplicate no ordinal.",
+        "A separate OS process writing the same ledger is observed after commit.",
+        "A rejected write leaves neither a record nor an event behind (transaction rollback), and the store stays usable."
+      ]
+    },
+    {
+      "file": "src/test/mcp.test.ts",
+      "tests": 18,
+      "defends": [
+        "PROTOCOL LEVEL: a real MCP Client and McpServer exchange JSON-RPC over the SDK transport.",
+        "Exactly the ten intended tools are exposed, each with a substantive description and an object input schema.",
+        "Read-only tools carry readOnlyHint; write tools do not.",
+        "Schema violations are rejected before the handler runs and write nothing.",
+        "Domain errors return a machine-readable code, not a protocol exception.",
+        "The recovery resource and the resume_task prompt return the same reconstruction as the tool.",
+        "REGRESSION: the reconstruction is present in structuredContent, not only in the text block (found by live agent integration).",
+        "REGRESSION: no tool declares an outputSchema whose payload is metadata only."
+      ]
+    },
+    {
+      "file": "src/test/telemetry.test.ts",
+      "tests": 12,
+      "defends": [
+        "Every state change emits exactly one event, inside the same transaction as the write.",
+        "Events carry a session id, so cross-session behaviour is measurable.",
+        "Metrics with no data report null rather than a misleading zero.",
+        "Every metric declares its observability (direct / partial / self_reported) and carries an interpretation note.",
+        "constraint_violation_rate is declared SELF_REPORTED and must stay so.",
+        "Vanity metrics (records stored, MCP calls, tokens stored) are absent by test."
+      ]
+    },
+    {
+      "file": "src/test/experiment.test.ts",
+      "tests": 10,
+      "defends": [
+        "The session-reset experiment is reproducible: identical fingerprints, sufficiency scores and budget sweep across runs.",
+        "The baseline is not a strawman: it contains the ticket and the repository state and satisfies probes on its own.",
+        "The ledger condition is additive over the baseline, not a replacement for it.",
+        "NEGATIVE CONTROL: a fact never recorded in Session A is not recoverable — the ledger does not invent knowledge.",
+        "NEGATIVE CONTROL: a repository-only fact is not recoverable from the ledger alone.",
+        "Critical sufficiency survives every budget in the sweep, and budget pressure demonstrably costs non-critical material."
+      ]
+    }
+  ],
+  "not_covered": [
+    "Whether a real coding agent, given a sufficient resume context, actually behaves better. Sufficiency is a necessary condition and an upper bound. Closing this gap requires live agent runs against a held-out task set; the design is pre-registered in docs/agentdev-experiment.md.",
+    "Recall of the secret filter against real-world credential formats beyond the twelve classes tested. The filter is biased toward false positives and is documented as best-effort.",
+    "Behaviour under a ledger with tens of thousands of records. Selection is O(n) per recovery with no index-assisted ranking; the largest tested task holds low tens of records.",
+    "Multi-writer contention beyond two connections and one child process on one machine. Networked or NFS-backed SQLite is untested and unsupported."
+  ]
+}

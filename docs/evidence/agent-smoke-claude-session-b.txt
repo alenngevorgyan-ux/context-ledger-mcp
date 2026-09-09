@@ -1,0 +1,23 @@
+# Verbatim: Claude Code 2.1.266, fresh process, session B resume
+# Executed 2026-09-09. Full context and the pre-fix failure: docs/agent-integration.md
+#
+# $ claude -p "You are resuming work on task task_7a9dea5c31d84945872f. You have no
+#   memory of previous sessions. Call ledger_recover_context for that task, then answer
+#   in exactly two lines: (1) which pagination approach has ALREADY been tried and
+#   rejected, and why; (2) whether you may add a new runtime dependency."
+#   --mcp-config /tmp/cl-smoke/mcp.json --strict-mcp-config
+#   --allowedTools mcp__context-ledger__ledger_recover_context
+#   --permission-mode acceptEdits
+
+Offset/limit pagination was already tried and rejected — it gives unstable ordering when rows are inserted mid-traversal.
+No — a blocking constraint forbids new runtime dependencies.
+
+# --- BEFORE the structured-output fix, the identical prompt produced: ---
+#
+# I can't answer either question: `ledger_recover_context` returned only metadata
+# (fingerprint, 255 used chars) with no records, and the follow-up
+# `ledger_get_task_state` call was denied permission — so I have no recovered
+# content, and I won't invent it.
+#
+# (1) Unknown — the ledger returned no rejected-approach record for pagination.
+# (2) Unknown — the ledger returned no constraint about adding runtime dependencies

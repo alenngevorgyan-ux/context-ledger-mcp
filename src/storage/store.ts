@@ -135,15 +135,24 @@ export class LedgerStore {
       created_at: now,
       updated_at: now,
     };
-    this.sql(
-      `INSERT INTO tasks (id, objective, repo, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-    ).run(task.id, task.objective, task.repo, task.status, task.created_at, task.updated_at);
-    this.emit('task_initialized', {
-      task_id: task.id,
-      session_id: input.session_id,
-      payload: { repo: task.repo, redactions: scrubbed.count },
-    });
+    // I7 applies to task creation too: the task row and its event commit
+    // together, so the event log can never disagree with the task table.
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      this.sql(
+        `INSERT INTO tasks (id, objective, repo, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      ).run(task.id, task.objective, task.repo, task.status, task.created_at, task.updated_at);
+      this.emitInTx('task_initialized', {
+        task_id: task.id,
+        session_id: input.session_id,
+        payload: { repo: task.repo, redactions: scrubbed.count },
+      });
+      this.db.exec('COMMIT');
+    } catch (err) {
+      this.db.exec('ROLLBACK');
+      throw err;
+    }
     return task;
   }
 
@@ -207,6 +216,18 @@ export class LedgerStore {
 
     const status = input.status ?? this.defaultStatus(input.type);
     this.assertStatusAllowed(input.type, status);
+    // A record must not be born inactive. `superseded` is reachable only by
+    // being superseded (which requires a successor), and `invalidated` only by
+    // an explicit transition. Allowing either at creation would let a caller
+    // manufacture a superseded record with no successor, which breaks the
+    // "the current record is well defined" property that recovery relies on.
+    if (INACTIVE_STATUSES.includes(status)) {
+      throw new LedgerError(
+        `cannot create a record with status '${status}'; a record is born active ` +
+          `and becomes ${status} only through supersession or an explicit transition`,
+        'invalid_record',
+      );
+    }
 
     const now = this.ts();
     const id = this.newId('rec');
@@ -365,6 +386,18 @@ export class LedgerStore {
       );
     }
     this.assertStatusAllowed(rec.type, status);
+    // `superseded` means "a successor exists". Reaching it by transition would
+    // create a superseded record with nothing superseding it, so the
+    // supersession chain would no longer have a well-defined head. Use
+    // write({ supersedes }) instead; use `invalidated` to retire a record with
+    // no replacement.
+    if (status === 'superseded') {
+      throw new LedgerError(
+        `cannot transition to 'superseded' directly; write a successor record with ` +
+          `supersedes='${id}', or use 'invalidated' to retire it without a replacement`,
+        'invalid_transition',
+      );
+    }
     const now = this.ts();
     this.db.exec('BEGIN IMMEDIATE');
     try {

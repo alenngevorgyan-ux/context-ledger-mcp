@@ -249,3 +249,83 @@ describe('supersession', () => {
     d.cleanup();
   });
 });
+
+/**
+ * Invariant holes found by the adversarial self-review in docs/hostile-review.md.
+ * Each of these was reachable through the public store API before the fix.
+ */
+describe('invariant holes closed by hostile review', () => {
+  test('a record cannot be BORN superseded or invalidated', () => {
+    const svc = deterministicService(':memory:');
+    const { task } = seedTask(svc);
+    for (const status of ['superseded', 'invalidated'] as const) {
+      assert.throws(
+        () =>
+          svc.store.write({
+            task_id: task.id, type: 'finding', content: 'x', session_id: 's', status,
+          }),
+        /cannot create a record with status/,
+        `status '${status}' must be unreachable at creation`,
+      );
+    }
+    svc.close();
+  });
+
+  test('transition cannot fake supersession (no successor-less superseded record)', () => {
+    const svc = deterministicService(':memory:');
+    const { task } = seedTask(svc);
+    const d = svc.store.write({
+      task_id: task.id, type: 'decision', content: 'A', rationale: 'r', session_id: 's',
+    });
+    assert.throws(() => svc.store.transition(d.id, 'superseded', 's'), /cannot transition to 'superseded'/);
+    // the supported ways out are a successor, or invalidation
+    svc.store.transition(d.id, 'invalidated', 's');
+    assert.equal(svc.store.requireRecord(d.id).status, 'invalidated');
+    svc.close();
+  });
+
+  test('every superseded record has exactly one successor', () => {
+    const svc = deterministicService(':memory:');
+    const { task } = seedTask(svc);
+    let prev = svc.store.write({
+      task_id: task.id, type: 'decision', content: 'v0', rationale: 'r', session_id: 's',
+    });
+    for (let i = 1; i <= 4; i++) {
+      prev = svc.store.write({
+        task_id: task.id, type: 'decision', content: `v${i}`, rationale: 'r',
+        supersedes: prev.id, session_id: 's',
+      });
+    }
+    const all = svc.store.listRecords(task.id, { types: ['decision'] });
+    const successorOf = new Map(all.filter((r) => r.supersedes).map((r) => [r.supersedes!, r.id]));
+    for (const r of all) {
+      if (r.status === 'superseded') {
+        assert.ok(successorOf.has(r.id), `${r.id} is superseded but nothing supersedes it`);
+      }
+    }
+    // and exactly one record is the live head
+    assert.equal(all.filter((r) => r.status === 'active').length, 1);
+    svc.close();
+  });
+
+  test('an invalidated record is frozen and leaves recovery', () => {
+    const svc = deterministicService(':memory:');
+    const { task, c } = seedTask(svc);
+    svc.store.transition(c.id, 'invalidated', 's', 'constraint withdrawn by the tech lead');
+    const { text } = svc.recover({ task_id: task.id, session_id: 's' });
+    assert.ok(!text.includes('No new runtime dependencies'));
+    assert.throws(() => svc.store.transition(c.id, 'active', 's'), /frozen/);
+    // but it is still auditable
+    assert.ok(svc.store.listRecords(task.id).some((r) => r.id === c.id));
+    svc.close();
+  });
+
+  test('task creation is atomic with its telemetry event', () => {
+    const svc = deterministicService(':memory:');
+    const t = svc.store.createTask({ objective: 'atomic', session_id: 's' });
+    const evs = svc.store.listEvents(t.id);
+    assert.equal(evs.length, 1);
+    assert.equal(evs[0]!.type, 'task_initialized');
+    svc.close();
+  });
+});

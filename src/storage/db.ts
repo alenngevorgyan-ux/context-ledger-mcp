@@ -6,7 +6,6 @@ import { migrate } from './migrations.js';
 export interface OpenOptions {
   /** ':memory:' or a filesystem path. */
   path: string;
-  readOnly?: boolean;
 }
 
 /**
@@ -19,15 +18,11 @@ export interface OpenOptions {
  */
 export function openDatabase(opts: OpenOptions): DatabaseSync {
   if (opts.path !== ':memory:') mkdirSync(dirname(opts.path), { recursive: true });
-  const db = new DatabaseSync(opts.path, { readOnly: opts.readOnly ?? false });
-  if (!opts.readOnly) {
-    if (opts.path !== ':memory:') db.exec('PRAGMA journal_mode = WAL');
-    db.exec('PRAGMA busy_timeout = 5000');
-    db.exec('PRAGMA foreign_keys = ON');
-    db.exec('PRAGMA synchronous = NORMAL');
-    migrate(db);
-  } else {
-    db.exec('PRAGMA foreign_keys = ON');
-  }
+  const db = new DatabaseSync(opts.path);
+  if (opts.path !== ':memory:') db.exec('PRAGMA journal_mode = WAL');
+  db.exec('PRAGMA busy_timeout = 5000');
+  db.exec('PRAGMA foreign_keys = ON');
+  db.exec('PRAGMA synchronous = NORMAL');
+  migrate(db);
   return db;
 }

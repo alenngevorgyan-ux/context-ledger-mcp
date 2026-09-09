@@ -1,0 +1,70 @@
+  ✔ a different focus changes ranking deterministically, not randomly (8.434286ms)
+  ✔ ranking has no ties left to chance: equal-score items order by ordinal then id (5.854757ms)
+✔ recovery: determinism (114.112393ms)
+▶ recovery: bounding
+  ✔ a generous budget stays within budget (5.073982ms)
+  ✔ a tight budget drops low-priority material and says so (4.290594ms)
+  ✔ blocking constraints are NEVER dropped, even at an absurd budget (4.64171ms)
+  ✔ unmet acceptance criteria and rejected approaches are never dropped (37.277943ms)
+  ✔ an advisory constraint IS droppable under pressure (6.277134ms)
+✔ recovery: bounding (58.824331ms)
+▶ recovery: content
+  ✔ contains every mandated section, and marks empty ones explicitly (23.91419ms)
+  ✔ decisions carry their rationale into recovery (3.536981ms)
+  ✔ completed todos and resolved questions leave the plan (4.879332ms)
+  ✔ met acceptance criteria are shown as MET, not hidden (10.399735ms)
+  ✔ the output tells the reader not to trust it over the repository (1.888243ms)
+  ✔ recovery emits a telemetry event so utilisation is measurable (6.438138ms)
+✔ recovery: content (51.964924ms)
+▶ lexical ranking primitives
+  ✔ tokenize strips stopwords and short tokens (0.28922ms)
+  ✔ overlapScore is coverage of the query, bounded to [0,1] (0.311513ms)
+✔ lexical ranking primitives (1.209994ms)
+▶ secret detection
+  ✔ detects aws_access_key_id (4.159928ms)
+  ✔ detects github_token (0.264222ms)
+  ✔ detects openai_key (0.343664ms)
+  ✔ detects anthropic_key (52.143917ms)
+  ✔ detects slack_token (0.511774ms)
+  ✔ detects google_api_key (0.52945ms)
+  ✔ detects stripe_key (0.413798ms)
+  ✔ detects jwt (0.548756ms)
+  ✔ detects bearer_token (0.795761ms)
+  ✔ detects url_userinfo (2.308244ms)
+  ✔ detects env_assignment (0.209954ms)
+  ✔ detects private_key_block (0.428936ms)
+  ✔ leaves ordinary engineering prose untouched (1.826877ms)
+  ✔ redaction is deterministic and idempotent-safe (0.255353ms)
+  ✔ overlapping detections do not corrupt the output (0.452126ms)
+✔ secret detection (100.786425ms)
+▶ secret hygiene at the storage boundary
+  ✔ default policy redacts on write and records the count (18.521802ms)
+  ✔ rationale and evidence are also scrubbed (2.153253ms)
+  ✔ the task objective is scrubbed too (2.34978ms)
+  ✔ reject mode refuses the write instead of storing it (2.825749ms)
+  ✔ secrets never reach recovery output (15.060902ms)
+✔ secret hygiene at the storage boundary (41.400766ms)
+▶ telemetry events
+  ✔ every state change emits exactly one event (13.523687ms)
+  ✔ supersession emits both a supersede and a record event (8.6677ms)
+  ✔ events carry the session id, so cross-session behaviour is measurable (4.286586ms)
+✔ telemetry events (28.443141ms)
+▶ derived metrics
+  ✔ recovery utilisation counts recoveries per distinct session (4.022682ms)
+  ✔ repeated failed approaches are detected by normalised similarity (3.993663ms)
+  ✔ distinct failures are not counted as repeats (2.96311ms)
+  ✔ metrics with no data report null, not a misleading zero (2.45961ms)
+  ✔ every metric declares how observable it actually is (3.115633ms)
+  ✔ vanity metrics are deliberately absent (2.444243ms)
+  ✔ successful resume rate needs both a recovery and a passing verification (4.776316ms)
+  ✔ redaction guardrail rises when secret-shaped text is written (2.784716ms)
+  ✔ signature normalisation ignores word order and duplication (0.307166ms)
+✔ derived metrics (27.952378ms)
+ℹ tests 107
+ℹ suites 18
+ℹ pass 107
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2301.091796

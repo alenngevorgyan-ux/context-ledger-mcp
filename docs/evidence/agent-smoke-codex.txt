@@ -1,0 +1,21 @@
+# Verbatim: Codex 0.153.4, reading the SAME ledger file Claude Code wrote.
+# Executed 2026-09-09. Full command in docs/agent-integration.md
+#
+# $ codex exec --skip-git-repo-check \
+#     -c 'mcp_servers.context_ledger={command="node",args=["…/dist/mcp/server.js"],
+#         env={CONTEXT_LEDGER_DB="/tmp/cl-smoke/ledger.sqlite",CONTEXT_LEDGER_SESSION="smoke_codex"}}' \
+#     "Call the context_ledger tool ledger_recover_context for task_id
+#      task_7a9dea5c31d84945872f. Then state in one line which pagination approach
+#      was already rejected."
+
+codex
+I'll check the context ledger for the rejected pagination approach.
+
+mcp: context_ledger/ledger_recover_context started
+mcp: context_ledger/ledger_recover_context (completed)
+
+codex
+Offset/limit pagination was already rejected because ordering becomes unstable when rows are inserted during traversal.
+
+tokens used
+4 662

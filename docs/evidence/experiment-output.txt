@@ -1,0 +1,65 @@
+SCENARIO: Per-API-key rate limiting, resumed after a session reset  (rate-limit-resume)
+Session A recorded 17 ledger records.
+
+MEASURED — context sufficiency of the Session B resume context
+
+  condition      chars   all probes     critical  facts/1k
+  baseline         680   3/16 18.8%     0/7 0.0%      4.41
+  ledger_only     3513  14/16 87.5%   7/7 100.0%      3.99
+  ledger          4195  15/16 93.8%   7/7 100.0%      3.58
+
+  delta: 75.0% overall, 100.0% on critical items
+
+Cost of bounding — sufficiency as the recovery budget is squeezed:
+   budget   used     all  critical  note
+     4000   2996   93.8%    100.0%  
+     2500   2421   81.3%    100.0%  
+     1500   2316   75.0%    100.0%  over budget: critical state refused to be dropped
+      900   2316   75.0%    100.0%  over budget: critical state refused to be dropped
+      500   2068   75.0%    100.0%  over budget: critical state refused to be dropped
+
+State the BASELINE lacks (and the predicted consequence):
+  [critical] Is the agent allowed to add Redis (or any new runtime dependency)?
+      -> Session B reaches for Redis, the canonical rate-limiting answer, and the PR is rejected.
+      -> recovered by ledger: YES
+  [critical] Must limiter state be shared across processes?
+      -> Session B ships an in-process counter that silently allows 4x the configured limit.
+      -> recovered by ledger: YES
+  [critical] Is the limit keyed on the API key or the source IP?
+      -> Session B implements IP-based limiting and misses the acceptance criterion.
+      -> recovered by ledger: YES
+  [critical] Was edge enforcement in nginx already tried and rejected?
+      -> Session B spends a cycle re-implementing and re-discarding the nginx approach.
+      -> recovered by ledger: YES
+  [critical] Was a module-level Map of counters already tried and rejected?
+      -> Session B re-implements the exact bug that Session A already found in a load test.
+      -> recovered by ledger: YES
+  [critical] What storage was chosen for the counters, and why?
+      -> Session B re-litigates a settled architectural decision, or contradicts it.
+      -> recovered by ledger: YES
+  [important] Fixed window or sliding log, and was the burst tradeoff accepted?
+      -> Session B switches to a sliding window, reversing an accepted tradeoff without knowing it was accepted.
+      -> recovered by ledger: YES
+  [important] What does the test setup require before an integration test can pass?
+      -> Session B writes the integration test, hits a confusing missing-relation error, and debugs CI.
+      -> recovered by ledger: YES
+  [critical] What work is left, and what is already done?
+      -> Session B re-derives the plan, and may redo the migration that Session A already completed.
+      -> recovered by ledger: YES
+  [important] Is the counters migration already written?
+      -> Session B writes a duplicate migration.
+      -> recovered by ledger: YES
+  [useful] Is there an unresolved question blocking a design choice?
+      -> Session B silently picks an answer to a question that was escalated to a human.
+      -> recovered by ledger: YES
+  [important] Is there a latency budget the implementation must respect?
+      -> Session B ships a per-request extra query with no awareness of the SLO.
+      -> recovered by ledger: YES
+  [important] What exact Retry-After value should the 429 response carry?
+      -> Session B guesses a Retry-After value. NOTE: Session A never established this, so no condition can supply it. This probe exists to prove the ledger does not invent knowledge.
+      -> recovered by ledger: NO
+
+State the LEDGER condition ALSO lacks (honest negative result):
+  [important] What exact Retry-After value should the 429 response carry?
+
+NOT MEASURED: Agent behaviour. Whether a real coding agent given the sufficient context actually avoids the repeated dead ends, honours the constraints and completes the task. Sufficiency is a necessary condition and an upper bound, not evidence of outcome. See docs/agentdev-experiment.md for the pre-registered live-agent design.
