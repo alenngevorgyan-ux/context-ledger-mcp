@@ -38,8 +38,9 @@ export function renderRecovery(sel: RecoverySelection): string {
   const notes: string[] = [];
   if (sel.budget_exceeded) {
     notes.push(
-      'BUDGET EXCEEDED: critical state (blocking constraints, unmet acceptance criteria, ' +
-        'rejected approaches) is never dropped, so this block is over its character budget.',
+      'BUDGET EXCEEDED: protected state (blocking constraints, unmet acceptance criteria, ' +
+        'rejected approaches, active decisions) is never dropped, so this block is over its ' +
+        'character budget. Lower-priority material was dropped first.',
     );
   }
   if (sel.total_omitted > 0) {

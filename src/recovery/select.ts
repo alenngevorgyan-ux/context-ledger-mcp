@@ -265,12 +265,30 @@ export function selectRecovery(store: LedgerStore, req: RecoveryRequest): Recove
     const chosen: SelectedItem[] = [];
     for (const item of considered) {
       const cost = item.line.length + 4; // "  - " prefix
-      // Mandatory-critical items are never dropped for budget: blocking
-      // constraints, unmet acceptance criteria, and rejected approaches.
+      // PROTECTED SET — never dropped for budget.
+      //
+      // The rule is not "the important ones". It is: state whose loss causes
+      // SILENT INCORRECTNESS, and which the agent cannot recover by reading
+      // the repository.
+      //   - blocking constraints    -> violated without noticing
+      //   - unmet acceptance criteria -> shipped incomplete
+      //   - rejected approaches     -> dead end walked again
+      //   - active decisions        -> settled architecture contradicted
+      // Findings and todos are NOT protected: a finding is, by definition,
+      // something re-derivable from the repository, and a todo is re-derivable
+      // from the acceptance criteria.
+      //
+      // Decisions were added to this set after the session-reset harness
+      // (src/experiment) showed the Postgres-vs-Redis decision being dropped at
+      // a 1500-char budget while an advisory constraint outranked it.
+      // Protection is still bounded by the per-section cap, so a task with an
+      // unbounded number of live decisions overflows the budget loudly rather
+      // than degrading silently — see docs/failure-model.md.
       const critical =
         (spec.key === 'constraints' && item.record.severity === 'blocking') ||
         (spec.key === 'acceptance_criteria' && item.record.status !== 'done') ||
-        spec.key === 'rejected_approaches';
+        spec.key === 'rejected_approaches' ||
+        spec.key === 'decisions';
 
       if (used + cost > budget && !critical) {
         omitted++;
@@ -295,12 +313,16 @@ export function selectRecovery(store: LedgerStore, req: RecoveryRequest): Recove
     });
   }
 
+  // CONTENT fingerprint: hashes what the reconstruction SAYS, not which rows
+  // it came from. Deliberately excludes record ids and the task id, so two
+  // ledgers holding the same state produce the same fingerprint — that is the
+  // property the experiment harness needs to assert reproducibility across
+  // freshly built databases. It is not a database identity.
   const fingerprint = fingerprintOf([
-    task.id,
     task.objective,
     String(budget),
     req.focus ?? '',
-    ...sections.flatMap((s) => [s.key, ...s.items.map((i) => `${i.record.id}:${i.line}`)]),
+    ...sections.flatMap((s) => [s.key, ...s.items.map((i) => i.line)]),
   ]);
 
   return {
