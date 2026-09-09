@@ -315,10 +315,14 @@ function cmdServeInfo(): void {
   const abs = process.cwd();
   out('Register the Context Ledger MCP server with an agent host.');
   out('');
-  out('Claude Code (project scope):');
+  out('This repository already ships a working .mcp.json (relative paths).');
+  out('');
+  out('Claude Code (project scope), if you need to add it elsewhere:');
   out(`  claude mcp add context-ledger --scope project \\`);
-  out(`    --env CONTEXT_LEDGER_DB=.ledger/ledger.sqlite \\`);
+  out(`    -e CONTEXT_LEDGER_DB=.ledger/ledger.sqlite \\`);
   out(`    -- node ${abs}/dist/mcp/server.js`);
+  out('  (project-scoped servers need an interactive approval on first use;');
+  out('   `claude -p --mcp-config <file> --strict-mcp-config` avoids it)');
   out('');
   out('Generic mcpServers JSON (Codex, and most other hosts):');
   out(JSON.stringify({

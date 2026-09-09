@@ -3,9 +3,7 @@
     "context-ledger": {
       "type": "stdio",
       "command": "node",
-      "args": [
-        "/Users/macair/context-ledger-mcp/dist/mcp/server.js"
-      ],
+      "args": ["dist/mcp/server.js"],
       "env": {
         "CONTEXT_LEDGER_DB": ".ledger/ledger.sqlite",
         "CONTEXT_LEDGER_SECRETS": "redact"
