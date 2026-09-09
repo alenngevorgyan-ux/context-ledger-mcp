@@ -49,7 +49,7 @@ output. The ledger rows are partly a self-consistency check — see
 
 A coding agent working past one context window loses the reasoning layer around
 the code. Not the code — that is on disk — but *why* it looks like that, *what
-was already ruled out*, and *what was still owed*.
+was already ruled out*, and what was still owed.
 
 Concretely, eight failure modes:
 
